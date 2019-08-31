@@ -1,6 +1,6 @@
+import * as admin from 'firebase-admin';
 import bcrypt from 'bcrypt';
 import helper from '../helper';
-import User from '../users/user.model';
 
 const emailRegex = /\S+@\S+\.\S+/;
 const passwordRegex = /.{6,12}/;
@@ -19,16 +19,37 @@ const signup = async (req, res) => {
 
   if (!bcrypt.compareSync(confirmPassword, passwordHash)) return res.status(400).send({ errors: ['Senhas não conferem!'] });
 
-  User.findOne({ email }, (err, user) => {
-    if (err) return helper.sendErrorsFromDB(res, err);
-    else if (user) return res.status(400).send({ errors: ['Email já cadastrado!'] });
+  const db = admin.database();
+  const ref = db.ref('auth-db');
 
-    const newUser = new User({ name, email, password: passwordHash });
-    newUser.save((err) => {
-      if (err) return helper.sendErrorsFromDB(res, err);
-      return res.status(200).send({ data: true, messages: ['Registro realizado com sucesso!'] });
-    });
-  });
+  const snap = await ref.once('value');
+  const usersRef = ref.child('users');
+
+  try {
+    if (snap.exportVal() === null) {
+      usersRef.push({
+        name: name,
+        email: email,
+        password: passwordHash
+      });
+      return res.status(200).send({ message: 'Registro realizado com sucesso!' });
+    } else {
+      usersRef.orderByChild('email').equalTo(email).on('value', (snap) => {
+        if (snap.val() === null) {
+          usersRef.push({
+            name: name,
+            email: email,
+            password: passwordHash
+          });
+          return res.status(200).send({ message: 'Registro realizado com sucesso!' });
+        } else {
+          return res.status(400).send({ message: 'Email já cadastrado!' });
+        }
+      });
+    }
+  } catch (error) {
+    return res.status(500).send({ message: error });
+  }
 };
 
 export default signup;
