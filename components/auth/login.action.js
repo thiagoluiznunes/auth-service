@@ -1,26 +1,42 @@
+import * as admin from 'firebase-admin';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import User from '../users/user.model';
-import { AUTH_SECRET } from "babel-dotenv";
+import { AUTH_SECRET } from 'babel-dotenv';
+import hp from '../helper';
 
-const login = (req, res) => {
+const login = async (req, res) => {
   const email = req.body.email || '';
   const password = req.body.password || '';
 
-  User.findOne({ email }, (err, user) => {
-    if (err) {
-      return res.status(400).send({ message: err });
-    } else if (user && bcrypt.compareSync(password, user.password)) {
-      const payload = { id: user.id, email: user.email };
-      const options = { algorithm:  'HS256', expiresIn: '1 day' };
-      const token = jwt.sign(payload, AUTH_SECRET, options);
-      const { name, email } = user;
+  const db = admin.database();
+  const ref = db.ref('auth-db');
 
-      res.json({ name, email, token });
+  const snap = await ref.once('value');
+  const usersRef = ref.child('users');
+
+  try {
+    if (snap.exportVal() === null) {
+      return res.status(400).send({ message: 'Usuário/Senha inválidos' });
     } else {
-      return res.status(400).send({ errors: 'Usuário/Senha inválidos' });
+      usersRef.orderByChild('email').equalTo(email).on('value', async (snap) => {
+        const user = await hp.snapshotToObject(snap);
+        if (snap.val() === null) {
+          return res.status(400).send({ message: 'Usuário/Senha inválidos' });
+        }
+        else if (user && bcrypt.compareSync(password, user.password)) {
+          const payload = { id: user.id, email: user.email };
+          const options = { algorithm: 'HS256', expiresIn: '1 day' };
+          const token = jwt.sign(payload, AUTH_SECRET, options);
+          const { name, email } = user;
+          res.json({ name, email, token });
+        } else {
+          return res.status(400).send({ errors: 'Usuário/Senha inválidos' });
+        }
+      });
     }
-  });
+  } catch (error) {
+    return res.status(500).send({ message: error });
+  }
 };
 
 export default login;
