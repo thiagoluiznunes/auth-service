@@ -33,7 +33,7 @@ const signup = async (req, res) => {
       });
       return res.status(200).send({ message: 'Registro realizado com sucesso!' });
     } else {
-      usersRef.orderByChild('email').equalTo(email).on('value', (snap) => {
+      usersRef.orderByChild('email').equalTo(email).once('value', (snap) => {
         if (snap.val() === null) {
           usersRef.push({
             name: name,

@@ -18,7 +18,7 @@ const login = async (req, res) => {
     if (snap.exportVal() === null) {
       return res.status(400).send({ message: 'Usuário/Senha inválidos' });
     } else {
-      usersRef.orderByChild('email').equalTo(email).on('value', async (snap) => {
+      usersRef.orderByChild('email').equalTo(email).once('value', async (snap) => {
         const user = await hp.snapshotToObject(snap);
         if (snap.val() === null) {
           return res.status(400).send({ message: 'Usuário/Senha inválidos' });
