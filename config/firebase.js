@@ -1,11 +1,12 @@
-import path from 'path';
 import * as admin from 'firebase-admin';
+import path from 'path';
+import { FIREBASE_URL } from 'babel-dotenv';
 
 const serviceAccount = path.join(__dirname, '../serviceAccountKey.json');
 const initConnection = () => {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: 'https://auth-service-50009.firebaseio.com/'
+    databaseURL: FIREBASE_URL
   });
 }
 

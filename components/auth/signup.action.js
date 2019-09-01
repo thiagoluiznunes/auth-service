@@ -1,6 +1,5 @@
 import * as admin from 'firebase-admin';
 import bcrypt from 'bcrypt';
-import helper from '../helper';
 
 const emailRegex = /\S+@\S+\.\S+/;
 const passwordRegex = /.{6,12}/;
